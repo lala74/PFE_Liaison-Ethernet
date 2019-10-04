@@ -1,0 +1,11 @@
+.DS_Store
+**/build/
+**/dist/
+**/nbproject/private/
+**/nbproject/Makefile-*.*
+**/nbproject/*.bash
+*.zip
+*.run
+Library/
+/Example/D10OnOffS3.X/dist/
+/Example/D10OnOffS3.X/build/
