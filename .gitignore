@@ -7,5 +7,6 @@
 *.zip
 *.run
 Library/
+Test/
 /Example/D10OnOffS3.X/dist/
 /Example/D10OnOffS3.X/build/
