@@ -23,6 +23,9 @@
 #include <stdlib.h>  /* Includes EXIT_SUCCESS definition */
 #include "app.h"
 
+#define ON              true
+#define OFF             false
+
 void SYS_Initialize(void);
 
 /* Global Variable Declaration */
@@ -38,6 +41,11 @@ APP_DATA appData = {.messageLine1 = "Explorer 16 Demo\n\r", .messageLine2 = "S3:
 
 /* Main Program */
 int main(void) {
+    // Initialize variables
+    bool preStateButton = OFF;
+    bool currStateButton = OFF;
+    bool stateLED = OFF;
+    
    /* Call the System Initialize routine */
    SYS_Initialize();
 
@@ -45,14 +53,30 @@ int main(void) {
    LCD_PutString(&LCD_REGs, appData.messageLine1, sizeof(appData.messageLine1) - 1);
    LCD_PutString(&LCD_REGs, appData.messageLine2, sizeof(appData.messageLine2) - 1);
 
+   LEDs_LAT &= 0xFF00;
+   LEDs_LAT |= 0xFF01;
+   
    /* Infinite Loop */
    while (true) {
-      while (!BUTTON_IsPressed(BUTTON_S3))
-         ;
-      LEDs_On();
-      while (BUTTON_IsPressed(BUTTON_S3))
-         ;
-      LEDs_Off();
+       currStateButton = BUTTON_IsPressed(BUTTON_S3);
+       if (currStateButton != preStateButton) {
+           preStateButton = currStateButton;
+           if (currStateButton == ON) {
+               if ((LEDs_LAT & 0x00FF)  == 0x0080){
+                   LEDs_LAT &= 0xFF00;
+                   LEDs_LAT |= 0xFF01;
+               } else {
+                   LEDs_LAT *= 2;
+               }
+//               if (stateLED == OFF) {
+//                   stateLED = ON;
+//                   LEDs_On();
+//               } else {
+//                   stateLED = OFF;
+//                   LEDs_Off();
+//               }
+           }
+       }
    };
 
    return EXIT_SUCCESS;
