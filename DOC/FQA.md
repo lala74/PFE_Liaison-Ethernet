@@ -19,3 +19,6 @@ Microchip libraries for application
 
 TCP/IP project with Explorer 16 + PICTail Plus Ethernet
 <http://www.ljcv.net/projects/exp16/index.html>
+
+Setting MCC Code Configurator
+<https://microchipdeveloper.com/mplabx:mcc>
