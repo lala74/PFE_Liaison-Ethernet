@@ -13,3 +13,9 @@ Compiler XC16, XC32:
 
 Example:
 <https://github.com/rbuj/explorer16>
+
+Microchip libraries for application
+<https://www.microchip.com/mplab/microchip-libraries-for-applications#>
+
+TCP/IP project with Explorer 16 + PICTail Plus Ethernet
+<http://www.ljcv.net/projects/exp16/index.html>

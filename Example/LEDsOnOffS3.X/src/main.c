@@ -77,6 +77,7 @@ int main(void) {
 //               }
            }
        }
+       //__delay_ms(1000);
    };
 
    return EXIT_SUCCESS;
