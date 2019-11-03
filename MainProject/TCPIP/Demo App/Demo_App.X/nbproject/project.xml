@@ -11,7 +11,9 @@
             <sourceEncoding>UTF-8</sourceEncoding>
             <asminc-extensions/>
             <make-dep-projects/>
-            <sourceRootList/>
+            <sourceRootList>
+                <sourceRootElem>bsp</sourceRootElem>
+            </sourceRootList>
             <confList>
                 <confElem>
                     <name>C18-PIC18EX_ENC28</name>
