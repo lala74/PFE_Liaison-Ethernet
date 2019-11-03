@@ -13,6 +13,7 @@
             <make-dep-projects/>
             <sourceRootList>
                 <sourceRootElem>bsp</sourceRootElem>
+                <sourceRootElem>../bsp</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

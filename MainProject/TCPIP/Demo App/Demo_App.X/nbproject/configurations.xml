@@ -6,6 +6,7 @@
                    projectFiles="true">
       <logicalFolder name="f4" displayName="bsp" projectFiles="true">
         <itemPath>bsp/adc.h</itemPath>
+        <itemPath>../bsp/adc.h</itemPath>
       </logicalFolder>
       <logicalFolder name="Common" displayName="Common" projectFiles="true">
         <itemPath>../../../Microchip/Include/Compiler.h</itemPath>
@@ -161,7 +162,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <logicalFolder name="f1" displayName="bsp" projectFiles="true">
-        <itemPath>bsp/adc.c</itemPath>
+        <itemPath>../bsp/adc.c</itemPath>
       </logicalFolder>
       <logicalFolder name="Examples" displayName="Examples" projectFiles="true">
         <itemPath>../BerkeleyTCPClientDemo.c</itemPath>
@@ -280,6 +281,7 @@
   </logicalFolder>
   <sourceRootList>
     <Elem>bsp</Elem>
+    <Elem>../bsp</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
