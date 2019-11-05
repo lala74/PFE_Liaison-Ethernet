@@ -73,6 +73,8 @@
 // Include functions specific to this stack application
 #include "MainDemo.h"
 
+#include "bsp/adc.h"
+
 // Used for Wi-Fi assertions
 #define WF_MODULE_NUMBER   WF_MODULE_MAIN_DEMO
 
@@ -653,7 +655,9 @@ static void ProcessIO(void)
 {
 #if defined(__C30__) || defined(__C32__)
     // Convert potentiometer result into ASCII string
-    uitoa((WORD)ADC1BUF0, AN0String);
+    uint16_t adcResult = ADC_Read10bit( ADC_CHANNEL_POTENTIOMETER );
+    uitoa((WORD)adcResult, AN0String);
+    //uitoa((WORD)ADC1BUF0, AN0String);
 #else
     // AN0 should already be set up as an analog input
     ADCON0bits.GO = 1;
@@ -901,15 +905,22 @@ static void InitializeBoard(void)
         #endif
     #endif
 
-    // ADC
-    AD1CON1 = 0x84E4;            // Turn on, auto sample start, auto-convert, 12 bit mode (on parts with a 12bit A/D)
-    AD1CON2 = 0x0404;            // AVdd, AVss, int every 2 conversions, MUXA only, scan
-    AD1CON3 = 0x1003;            // 16 Tad auto-sample, Tad = 3*Tcy
-    #if defined(__32MX460F512L__) || defined(__32MX795F512L__)    // PIC32MX460F512L and PIC32MX795F512L PIMs has different pinout to accomodate USB module
-        AD1CSSL = 1<<2;                // Scan pot
-    #else
-        AD1CSSL = 1<<5;                // Scan pot
-    #endif
+                
+    /************************************/
+    /*  ADC - Analog Digital Converter  */
+    /************************************/
+    ADC_ChannelEnable( ADC_CHANNEL_TEMPERATURE_SENSOR );
+    ADC_ChannelEnable( ADC_CHANNEL_POTENTIOMETER );
+    ADC_SetConfiguration( ADC_CONFIGURATION_DEFAULT );
+    
+//    AD1CON1 = 0x84E4;            // Turn on, auto sample start, auto-convert, 12 bit mode (on parts with a 12bit A/D)
+//    AD1CON2 = 0x0404;            // AVdd, AVss, int every 2 conversions, MUXA only, scan
+//    AD1CON3 = 0x1003;            // 16 Tad auto-sample, Tad = 3*Tcy
+//    #if defined(__32MX460F512L__) || defined(__32MX795F512L__)    // PIC32MX460F512L and PIC32MX795F512L PIMs has different pinout to accomodate USB module
+//        AD1CSSL = 1<<2;                // Scan pot
+//    #else
+//        AD1CSSL = 1<<5;                // Scan pot
+//    #endif
 
     // UART
     #if defined(STACK_USE_UART)
