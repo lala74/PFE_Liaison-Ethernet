@@ -1,3 +1,3 @@
-# Branch Dev_DUC
+# Branch Dev_THUC
 
-This is a branch for Duc's testing developpemnt
+This is a branch for Thuc's testing developpemnt
