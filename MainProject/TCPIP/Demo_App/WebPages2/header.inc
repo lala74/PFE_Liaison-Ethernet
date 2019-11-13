@@ -4,6 +4,7 @@
 <head>
 <title>Microchip TCP/IP Stack Demo App</title>
 <link href="/mchp.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="calculator.css" />
 <script src="/mchp.js" type="text/javascript"></script>
 </head>
 
@@ -27,4 +28,5 @@
 <a href="/dyndns">Dynamic DNS</a>
 <a href="/protect/config.htm">Network Configuration</a>
 <a href="/snmp/snmpconfig.htm">SNMP Configuration</a>
+<a href="/clavier.htm">Control Led</a>
 </div>

@@ -77,6 +77,27 @@ uint8_t ADC_ReadPercentage(ADC_CHANNEL channel);
 uint16_t ADC_Read10bit(ADC_CHANNEL channel);
 
 /*********************************************************************
+* Function: ADC_Read10bit(ADC_CHANNEL channel);
+*
+* Overview: Reads the requested ADC channel and returns the 10-bit
+*           representation of this data.
+*
+* PreCondition: channel is enabled via ADC_ChannelEnable()
+*
+* Input: ADC_CHANNEL channel - enumeration of the ADC channels
+*        available in this demo.  They should be meaningful names and
+*        not the names of the ADC pins on the device (as the demo code
+*        may be ported to other boards).
+*         i.e. - ADCReadPercentage(ADC_CHANNEL_POTENTIOMETER);
+*
+* Output: uint16_t the right adjusted 10-bit representation of the ADC
+*         channel conversion or 0xFFFF for an error.
+*
+********************************************************************/
+uint16_t ADC_Read10bit_Chn1(ADC_CHANNEL channel);
+
+
+/*********************************************************************
 * Function: bool ADC_ChannelEnable(ADC_CHANNEL channel, ADC_CONFIGURATION configuration);
 *
 * Overview: Enables specified channel

@@ -55,6 +55,7 @@
 
 #if !defined(THIS_IS_STACK_APPLICATION)
 	extern BYTE AN0String[8];
+    extern BYTE AN4String[8];
 #endif
 
 void DoUARTConfig(void);

@@ -82,6 +82,7 @@
 APP_CONFIG AppConfig;
 static unsigned short wOriginalAppConfigChecksum;    // Checksum of the ROM defaults for AppConfig
 BYTE AN0String[8];
+BYTE AN4String[8];
 
 // Use UART2 instead of UART1 for stdout (printf functions).  Explorer 16 
 // serial port hardware is on PIC UART2 module.
@@ -95,6 +96,7 @@ BYTE AN0String[8];
 static void InitAppConfig(void);
 static void InitializeBoard(void);
 static void ProcessIO(void);
+static void ProcessTemp(void);
 #if defined(WF_CS_TRIS)
     void WF_Connect(void);
     #if !defined(MRF24WG)
@@ -186,7 +188,8 @@ int main(void)
 {
     static DWORD t = 0;
     static DWORD dwLastIP = 0;
-
+    uint16_t temperature;
+    char result[20];
     // Initialize application specific hardware
     InitializeBoard();
 
@@ -194,9 +197,12 @@ int main(void)
     // Initialize and display the stack version on the LCD
     LCDInit();
     DelayMs(100);
-    strcpypgm2ram((char*)LCDText, "TCPStack " TCPIP_STACK_VERSION "  "
-        "                "); 
-    LCDUpdate();
+    //tempinC = temperature/1000;
+    //tempinC = tempinC*10;
+    //tempinF = 9*tempinC/5 + 3200;
+    //strcpypgm2ram((char*)LCDText, "TCPStack " TCPIP_STACK_VERSION "  "
+//        "                "); 
+    //LCDUpdate();
     #endif
 
     // Initialize stack-related hardware components that may be 
@@ -236,7 +242,6 @@ int main(void)
                 #if defined(STACK_USE_UART)
                 putrsUART("\r\n\r\nBUTTON0 held for more than 4 seconds.  Default settings restored.\r\n\r\n");
                 #endif
-
                 LED_PUT(0x0F);
                 while((LONG)(TickGet() - StartTime) <= (LONG)(9*TICK_SECOND/2));
                 LED_PUT(0x00);
@@ -381,8 +386,19 @@ int main(void)
         BerkeleyUDPClientDemo();
         #endif
 
+        ProcessTemp();
+        // Read Temperature and show on LC
+        ADC_SetConfiguration(ADC_CONFIGURATION_DEFAULT);
+        ADC_ChannelEnable(ADC_CHANNEL_4);
+        temperature = ADC_Read10bit(ADC_CHANNEL_4)*(1.6/1024)*(125/1.6);
+        uitoa((WORD)temperature, AN4String);
+        strcpy(result,"Temp: ");
+        strcat(result,AN4String);
+        strcat(result," deg C");
+        strcpypgm2ram((char*)LCDText, result); 
+        LCDUpdate();
+        // read potentionmetre
         ProcessIO();
-
         // If the local IP address has changed (ex: due to DHCP lease change)
         // write the new IP address to the LCD display, UART, and Announce 
         // service
@@ -676,6 +692,35 @@ static void ProcessIO(void)
 
     // Convert 10-bit value into ASCII string
     uitoa(*((WORD*)(&ADRESL)), AN0String);
+#endif
+}
+
+// Processes A/D data from the potentiometer
+static void ProcessTemp(void)
+{
+#if defined(__C30__) || defined(__C32__)
+    // Convert potentiometer result into ASCII string
+    uint16_t temperature = ADC_Read10bit(ADC_CHANNEL_4)*125/1024;
+    uitoa((WORD)temperature, AN4String);
+    //uitoa((WORD)ADC1BUF0, AN0String);
+#else
+    // AN0 should already be set up as an analog input
+    ADCON0bits.GO = 1;
+
+    // Wait until A/D conversion is done
+    while(ADCON0bits.GO);
+
+    // AD converter errata work around (ex: PIC18F87J10 A2)
+    #if !defined(__18F87J50) && !defined(_18F87J50) && !defined(__18F87J11) && !defined(_18F87J11) 
+    {
+        BYTE temp = ADCON2;
+        ADCON2 |= 0x7;    // Select Frc mode by setting ADCS0/ADCS1/ADCS2
+        ADCON2 = temp;
+    }
+    #endif
+
+    // Convert 10-bit value into ASCII string
+    uitoa(*((WORD*)(&ADRESL)), AN4String);
 #endif
 }
 

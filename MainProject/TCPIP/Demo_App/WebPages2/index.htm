@@ -21,6 +21,7 @@
 		<span id="btn1">?</span> &nbsp;
 		<span id="btn0">?</span></p>
 		<p>Potentiometer: <span id="pot0" style="font-weight:normal">?</span></p>
+        <p>Temperature: <span id="temp" style="font-weight:normal">?</span></p>
 	</div>
 </div>
 
@@ -99,6 +100,7 @@ function updateStatus(xmlData) {
 
 	// Update the POT value
 	document.getElementById('pot0').innerHTML = getXMLValue(xmlData, 'pot0');
+    document.getElementById('temp').innerHTML = getXMLValue(xmlData, 'temp');
 }
 setTimeout("newAJAXCommand('status.xml', updateStatus, true)",500);
 //-->

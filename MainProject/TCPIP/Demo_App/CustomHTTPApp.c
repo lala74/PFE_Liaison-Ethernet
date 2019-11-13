@@ -176,7 +176,7 @@ BYTE HTTPCheckAuth(BYTE* cUser, BYTE* cPass)
   Section:
 	GET Form Handlers
   ***************************************************************************/
-  
+
 /*****************************************************************************
   Function:
 	HTTP_IO_RESULT HTTPExecuteGet(void)
@@ -186,9 +186,9 @@ BYTE HTTPCheckAuth(BYTE* cUser, BYTE* cPass)
   ***************************************************************************/
 HTTP_IO_RESULT HTTPExecuteGet(void)
 {
-	BYTE *ptr;
+	BYTE *ptr, *ptrNew;
 	BYTE filename[20];
-	
+	int i,m;
 	// Load the file name
 	// Make sure BYTE filename[] above is large enough for your longest name
 	MPFSGetFilename(curHTTP.file, filename, 20);
@@ -256,6 +256,20 @@ HTTP_IO_RESULT HTTPExecuteGet(void)
 				LED7_IO ^= 1;
 				break;
 		}
+		ptrNew = HTTPGetROMArg(curHTTP.data, (ROM BYTE *)"ledtoggle");
+		// Toggle the specified LED
+                i = 5;
+                while(i>1)
+                {
+                    LED1_IO ^= 1;
+                    LED2_IO ^= 1;
+                    LED3_IO ^= 1;
+                    LED4_IO ^= 1;
+                    LED5_IO ^= 1;
+                    LED6_IO ^= 1;
+                    DelayMs(atol(ptrNew));
+                    i = i-1;
+                }
 		
 	}
 	
@@ -1731,6 +1745,45 @@ void HTTPPrint_led(WORD num)
 	return;
 }
 
+void HTTPPrint_ledtoggle(WORD num)
+{
+	// Determine which LED
+	switch(num)
+	{
+		case 0:
+			num = LED0_IO;
+			break;
+		case 1:
+			num = LED1_IO;
+			break;
+		case 2:
+			num = LED2_IO;
+			break;
+		case 3:
+			num = LED3_IO;
+			break;
+		case 4:
+			num = LED4_IO;
+			break;
+		case 5:
+			num = LED5_IO;
+			break;
+		case 6:
+			num = LED6_IO;
+			break;
+		case 7:
+			num = LED7_IO;
+			break;
+
+		default:
+			num = 0;
+	}
+
+	// Print the output
+	TCPPut(sktHTTP, (num?'1':'0'));
+	return;
+}
+
 void HTTPPrint_ledSelected(WORD num, WORD state)
 {
 	// Determine which LED to check
@@ -1794,6 +1847,12 @@ void HTTPPrint_pot(void)
 #endif
 
    	TCPPutString(sktHTTP, AN0String);
+}
+
+void HTTPPrint_temp(void)
+{
+    strcat(AN4String," °C");
+   	TCPPutString(sktHTTP, AN4String);
 }
 
 void HTTPPrint_lcdtext(void)

@@ -60,7 +60,6 @@ void HTTPPrint_led(WORD);
 void HTTPPrint_ledSelected(WORD,WORD);
 void HTTPPrint_btn(WORD);
 void HTTPPrint_pot(void);
-void HTTPPrint_cookiename(void);
 void HTTPPrint_(void);
 void HTTPPrint_lcdtext(void);
 void HTTPPrint_status_ok(void);
@@ -72,19 +71,8 @@ void HTTPPrint_ddns_service(WORD);
 void HTTPPrint_ddns_user(void);
 void HTTPPrint_ddns_pass(void);
 void HTTPPrint_ddns_host(void);
-void HTTPPrint_snmp_en(void);
-void HTTPPrint_read_comm(WORD);
-void HTTPPrint_write_comm(WORD);
-void HTTPPrint_rebootaddr(void);
-void HTTPPrint_config_mac(void);
-void HTTPPrint_config_hostname(void);
-void HTTPPrint_config_dhcpchecked(void);
-void HTTPPrint_config_ip(void);
-void HTTPPrint_config_gw(void);
-void HTTPPrint_config_subnet(void);
-void HTTPPrint_config_dns1(void);
-void HTTPPrint_config_dns2(void);
-void HTTPPrint_reboot(void);
+void HTTPPrint_temp(void);
+void HTTPPrint_ledtoggle(WORD);
 
 void HTTPPrint(DWORD callbackID)
 {
@@ -171,9 +159,6 @@ void HTTPPrint(DWORD callbackID)
         case 0x0000001a:
 			HTTPPrint_pot();
 			break;
-        case 0x0000001b:
-			HTTPPrint_cookiename();
-			break;
         case 0x0000001c:
 			HTTPPrint_();
 			break;
@@ -213,56 +198,11 @@ void HTTPPrint(DWORD callbackID)
         case 0x00000028:
 			HTTPPrint_ddns_host();
 			break;
-        case 0x00000029:
-			HTTPPrint_snmp_en();
+        case 0x0000003b:
+			HTTPPrint_temp();
 			break;
-        case 0x0000002a:
-			HTTPPrint_read_comm(0);
-			break;
-        case 0x0000002b:
-			HTTPPrint_read_comm(1);
-			break;
-        case 0x0000002c:
-			HTTPPrint_read_comm(2);
-			break;
-        case 0x0000002d:
-			HTTPPrint_write_comm(0);
-			break;
-        case 0x0000002e:
-			HTTPPrint_write_comm(1);
-			break;
-        case 0x0000002f:
-			HTTPPrint_write_comm(2);
-			break;
-        case 0x00000030:
-			HTTPPrint_rebootaddr();
-			break;
-        case 0x00000031:
-			HTTPPrint_config_mac();
-			break;
-        case 0x00000032:
-			HTTPPrint_config_hostname();
-			break;
-        case 0x00000033:
-			HTTPPrint_config_dhcpchecked();
-			break;
-        case 0x00000034:
-			HTTPPrint_config_ip();
-			break;
-        case 0x00000035:
-			HTTPPrint_config_gw();
-			break;
-        case 0x00000036:
-			HTTPPrint_config_subnet();
-			break;
-        case 0x00000037:
-			HTTPPrint_config_dns1();
-			break;
-        case 0x00000038:
-			HTTPPrint_config_dns2();
-			break;
-        case 0x00000039:
-			HTTPPrint_reboot();
+        case 0x0000003d:
+			HTTPPrint_ledtoggle(0);
 			break;
 		default:
 			// Output notification for undefined values
