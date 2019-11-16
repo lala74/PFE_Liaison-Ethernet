@@ -188,8 +188,8 @@ int main(void)
 {
     static DWORD t = 0;
     static DWORD dwLastIP = 0;
-    uint16_t temperature;
-    char result[20];
+    uint16_t temperature,LCDPos,j;
+    char result[20], time[16];
     // Initialize application specific hardware
     InitializeBoard();
 
@@ -397,8 +397,19 @@ int main(void)
         strcat(result," deg C");
         strcpypgm2ram((char*)LCDText, result); 
         LCDUpdate();
+                //afficher Time on LCD
+        LCDPos = 16;
+        strcpy(time,"Time: ");
+        strcat(time, __TIME__);
+        for(j = 0; j < strlen((char*)time); j++)
+            {
+                LCDText[LCDPos++] = time[j];
+            }
+        //strcpypgm2ram((char*)LCDText[16], time); 
+        LCDUpdate();
         // read potentionmetre
         ProcessIO();
+
         // If the local IP address has changed (ex: due to DHCP lease change)
         // write the new IP address to the LCD display, UART, and Announce 
         // service
@@ -440,7 +451,7 @@ int main(void)
 			#endif
 			#endif
 			
-        }    
+        }
         #if defined(DERIVE_KEY_FROM_PASSPHRASE_IN_HOST) && defined (MRF24WG)
             if (g_WpsPassphrase.valid) {
                 WF_ConvPassphrase2Key(g_WpsPassphrase.passphrase.keyLen, g_WpsPassphrase.passphrase.key,
@@ -702,7 +713,6 @@ static void ProcessTemp(void)
     // Convert potentiometer result into ASCII string
     uint16_t temperature = ADC_Read10bit(ADC_CHANNEL_4)*125/1024;
     uitoa((WORD)temperature, AN4String);
-    //uitoa((WORD)ADC1BUF0, AN0String);
 #else
     // AN0 should already be set up as an analog input
     ADCON0bits.GO = 1;
