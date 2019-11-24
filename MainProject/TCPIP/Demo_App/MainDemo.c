@@ -74,7 +74,6 @@
 #include "MainDemo.h"
 
 #include "bsp/adc.h"
-
 // Used for Wi-Fi assertions
 #define WF_MODULE_NUMBER   WF_MODULE_MAIN_DEMO
 
@@ -83,20 +82,127 @@ APP_CONFIG AppConfig;
 static unsigned short wOriginalAppConfigChecksum;    // Checksum of the ROM defaults for AppConfig
 BYTE AN0String[8];
 BYTE AN4String[8];
-
+BYTE TIMEString[8];
+#define MAX_COMMAND_LENGTH              50
 // Use UART2 instead of UART1 for stdout (printf functions).  Explorer 16 
 // serial port hardware is on PIC UART2 module.
 #if defined(EXPLORER_16) || defined(PIC24FJ256DA210_DEV_BOARD)
     int __C30_UART = 2;
 #endif
+#define DEFAULT_YEARS               0x0013
+#define DEFAULT_MONTH_DAY           0x0822
+// PIC24 RTCC Structure
+typedef union
+{
+    struct
+    {
+        unsigned char   mday;       // BCD codification for day of the month, 01-31
+        unsigned char   mon;        // BCD codification for month, 01-12
+        unsigned char   year;       // BCD codification for years, 00-99
+        unsigned char   reserved;   // reserved for future use. should be 0
+    };                              // field access
+    unsigned char       b[4];       // byte access
+    unsigned short      w[2];       // 16 bits access
+    unsigned long       l;          // 32 bits access
+} PIC24_RTCC_DATE;
 
+// PIC24 RTCC Structure
+typedef union
+{
+    struct
+    {
+        unsigned char   sec;        // BCD codification for seconds, 00-59
+        unsigned char   min;        // BCD codification for minutes, 00-59
+        unsigned char   hour;       // BCD codification for hours, 00-24
+        unsigned char   weekday;    // BCD codification for day of the week, 00-06
+    };                              // field access
+    unsigned char       b[4];       // byte access
+    unsigned short      w[2];       // 16 bits access
+    unsigned long       l;          // 32 bits access
+} PIC24_RTCC_TIME;
 
+// *****************************************************************************
+// *****************************************************************************
+// Configuration Bits
+// *****************************************************************************
+// ***************************************************************************** 
+#define PLL_96MHZ_OFF   0xFFFF
+#define PLL_96MHZ_ON    0xF7FF
+
+// Configuration Bit settings  for an Explorer 16 with USB PICtail Plus
+//      Primary Oscillator:             HS
+//      Internal USB 3.3v Regulator:    Disabled
+//      IOLOCK:                         Set Once
+//      Primary Oscillator Output:      Digital I/O
+//      Clock Switching and Monitor:    Both disabled
+//      Oscillator:                     Primary with PLL
+//      USB 96MHz PLL Prescale:         Divide by 2
+//      Internal/External Switch Over:  Enabled
+//      WDT Postscaler:                 1:32768
+//      WDT Prescaler:                  1:128
+//      WDT Window:                     Non-window Mode
+//      Comm Channel:                   EMUC2/EMUD2
+//      Clip on Emulation Mode:         Reset into Operation Mode
+//      Write Protect:                  Disabled
+//      Code Protect:                   Disabled
+//      JTAG Port Enable:               Disabled
+
+#if defined(__PIC24FJ256GB110__)
+    _CONFIG2(FNOSC_PRIPLL & POSCMOD_HS & PLL_96MHZ_ON & PLLDIV_DIV2) // Primary HS OSC with PLL, USBPLL /2
+    _CONFIG1(JTAGEN_OFF & FWDTEN_OFF & ICS_PGx2)   // JTAG off, watchdog timer off
+#elif defined(__PIC24FJ64GB004__) || defined(__PIC24FJ64GB002__)
+    _CONFIG1(WDTPS_PS1 & FWPSA_PR32 & WINDIS_OFF & FWDTEN_OFF & ICS_PGx1 & GWRP_OFF & GCP_OFF & JTAGEN_OFF)
+    _CONFIG2(POSCMOD_HS & I2C1SEL_PRI & IOL1WAY_OFF & OSCIOFNC_ON & FCKSM_CSECME & FNOSC_PRIPLL & PLL96MHZ_ON & PLLDIV_DIV2 & IESO_ON)
+    _CONFIG3(WPFP_WPFP0 & SOSCSEL_IO & WUTSEL_LEG & WPDIS_WPDIS & WPCFG_WPCFGDIS & WPEND_WPENDMEM)
+    _CONFIG4(DSWDTPS_DSWDTPS3 & DSWDTOSC_LPRC & RTCOSC_LPRC & DSBOREN_OFF & DSWDTEN_OFF)
+#elif defined(__PIC24FJ256GB106__)
+    _CONFIG1( JTAGEN_OFF & GCP_OFF & GWRP_OFF & COE_OFF & FWDTEN_OFF & ICS_PGx2) 
+    _CONFIG2( 0xF7FF & IESO_OFF & FCKSM_CSDCMD & OSCIOFNC_OFF & POSCMOD_HS & FNOSC_PRIPLL & PLLDIV_DIV3 & IOL1WAY_ON)
+#elif defined(__PIC24FJ256DA210__) || defined(__PIC24FJ256GB210__)
+    _CONFIG1(FWDTEN_OFF & ICS_PGx2 & GWRP_OFF & GCP_OFF & JTAGEN_OFF)
+    _CONFIG2(POSCMOD_HS & IOL1WAY_ON & OSCIOFNC_ON & FCKSM_CSDCMD & FNOSC_PRIPLL & PLL96MHZ_ON & PLLDIV_DIV2 & IESO_OFF)
+#endif
+
+        
 // Private helper functions.
 // These may or may not be present in all applications.
 static void InitAppConfig(void);
 static void InitializeBoard(void);
 static void ProcessIO(void);
 static void ProcessTemp(void);
+unsigned char AfficheTime(unsigned char *);
+unsigned char AfficheHours(unsigned char *);
+
+#if defined(__C30__)
+    DWORD   PIC24RTCCGetTime( void );
+    DWORD   PIC24RTCCGetDate( void );
+    void PIC24RTCCSetTime( WORD weekDay_hours, WORD minutes_seconds );
+    void PIC24RTCCSetDate( WORD xx_year, WORD month_day );
+    void    UnlockRTCC( void );
+#endif
+    
+typedef struct _COMMAND
+{
+    char        buffer[MAX_COMMAND_LENGTH];
+    BYTE        index;
+    BYTE        command;
+    BYTE        escFirstChar;
+    struct
+    {
+        BYTE    reading             : 1;
+        BYTE    escNeedFirstChar    : 1;
+        BYTE    escNeedSecondChar   : 1;
+    };
+} COMMAND;
+#ifndef MINIMUM_BUILD
+    COMMAND             commandInfo;
+    #if defined( __C30__ )
+        PIC24_RTCC_DATE currentDate;
+        PIC24_RTCC_TIME currentTime;
+        PIC24_RTCC_TIME previousTime;
+        PIC24_RTCC_TIME realTime;
+    #endif
+#endif
 #if defined(WF_CS_TRIS)
     void WF_Connect(void);
     #if !defined(MRF24WG)
@@ -108,6 +214,22 @@ static void ProcessTemp(void);
     #endif    /* defined(DERIVE_KEY_FROM_PASSPHRASE_IN_HOST) */
 #endif
 
+// *****************************************************************************
+// *****************************************************************************
+// Macros
+// *****************************************************************************
+// *****************************************************************************
+
+#define IsNum(c)            ((('0' <= c) && (c <= '9')) ? TRUE : FALSE)
+#define UpperCase(c)        (('a'<= c) && (c <= 'z') ? c - 0x20 : c)
+#define SkipWhiteSpace()    { while (commandInfo.buffer[commandInfo.index] == ' ') commandInfo.index++; }
+
+// Let compile time pre-processor calculate the PR1 (period)
+#define FOSC                72E6
+#define PB_DIV              8
+#define PRESCALE            256
+#define TOGGLES_PER_SEC     1
+#define T3_TICK             (FOSC/PB_DIV/PRESCALE/TOGGLES_PER_SEC)
 //
 // PIC18 Interrupt Service Routines
 // 
@@ -189,10 +311,33 @@ int main(void)
     static DWORD t = 0;
     static DWORD dwLastIP = 0;
     uint16_t temperature,LCDPos,j;
-    char result[20], time[16];
+    char result[20],timeStart[9];
     // Initialize application specific hardware
     InitializeBoard();
-
+    // Initialize the RTCC
+    strcpy(timeStart," ");
+    strcat(timeStart,__TIME__);
+    #if defined( __C30__)
+            // Turn on the secondary oscillator
+            __asm__ ("MOV #OSCCON,w1");
+            __asm__ ("MOV.b #0x02, w0");
+            __asm__ ("MOV #0x46, w2");
+            __asm__ ("MOV #0x57, w3");
+            __asm__ ("MOV.b w2, [w1]");
+            __asm__ ("MOV.b w3, [w1]");
+            __asm__ ("MOV.b w0, [w1]");
+            WORD weekday = 0x0300;
+            WORD hours, min, sec;
+            hours= ((int)(timeStart[1]-'0'))*10+(int)(timeStart[2]-'0');
+            
+            WORD default_Week_hours = weekday + hours;
+            min= ((int)(timeStart[4]-'0'))*10+(int)(timeStart[5]-'0');
+            sec= ((int)(timeStart[7]-'0'))*10+(int)(timeStart[8]-'0');
+            WORD default_min_sec = min*16*16 + sec;
+            PIC24RTCCSetDate( DEFAULT_YEARS, DEFAULT_MONTH_DAY );
+            PIC24RTCCSetTime( default_Week_hours, default_min_sec );
+            RCFGCAL = 0x8000;
+    #endif
     #if defined(USE_LCD)
     // Initialize and display the stack version on the LCD
     LCDInit();
@@ -305,6 +450,7 @@ int main(void)
     // job.
     // If a task needs very long time to do its job, it must be broken
     // down into smaller pieces so that other tasks can have CPU time.
+ 
     while(1)
     {
         // Blink LED0 (right most one) every second.
@@ -399,13 +545,39 @@ int main(void)
         LCDUpdate();
                 //afficher Time on LCD
         LCDPos = 16;
-        strcpy(time,"Time: ");
-        strcat(time, __TIME__);
-        for(j = 0; j < strlen((char*)time); j++)
+        int i = 1;
+        /*
+        strcpy(ctime,"Time: ");
+        strcat(ctime, __TIME__);
+        for(j = 0; j < strlen((char*)ctime); j++)
             {
-                LCDText[LCDPos++] = time[j];
+                LCDText[LCDPos++] = ctime[j];
             }
         //strcpypgm2ram((char*)LCDText[16], time); 
+        LCDUpdate();
+        */
+        #if defined(__C30__)
+        currentTime.l = PIC24RTCCGetTime();
+        #endif
+        strcpy(ctime,"Time: ");
+        realTime.hour = AfficheHours(&currentTime.hour);
+        uitoa((WORD)realTime.hour,TIMEString);
+        strcat(ctime,TIMEString);
+        
+        strcat(ctime,":");
+        realTime.min = AfficheTime(&currentTime.min);
+        uitoa((WORD)realTime.min,TIMEString);
+        strcat(ctime,TIMEString);
+        
+        strcat(ctime,":");
+        realTime.sec = AfficheTime(&currentTime.sec);
+        uitoa((WORD)realTime.sec,TIMEString);
+        strcat(ctime,TIMEString);
+        strcat(ctime," ");
+        for(j = 0; j < strlen((char*)ctime); j++)
+            {
+                LCDText[LCDPos++] = ctime[j];
+            }
         LCDUpdate();
         // read potentionmetre
         ProcessIO();
@@ -1409,3 +1581,263 @@ void SaveAppConfig(const APP_CONFIG *ptrAppConfig)
     #endif
 }
 #endif
+
+/****************************************************************************
+  Function:
+    void PIC24RTCCSetTime( WORD weekDay_hours, WORD minutes_seconds )
+  Description:
+    This routine sets the RTCC time to the specified value.
+  Precondition:
+    The RTCC module has been initialized.
+  Parameters:
+    WORD weekDay_hours      - BCD weekday in the upper byte, BCD hours in the
+                                lower byte
+    WORD minutes_seconds    - BCD minutes in the upper byte, BCD seconds in
+                                the lower byte
+  Returns:
+    None
+  Remarks:
+    For the PIC32MX, we use library routines.
+  ***************************************************************************/
+
+#if defined( __C30__ )
+void PIC24RTCCSetTime( WORD weekDay_hours, WORD minutes_seconds )
+{
+    unsigned char realmin, realsec, realhour;
+    UnlockRTCC();
+    RCFGCALbits.RTCPTR0 = 1;
+    RCFGCALbits.RTCPTR1 = 0;
+    if((WORD)(weekDay_hours & 0x00FF) <= 9)
+        realhour = (weekDay_hours & 0x00FF);
+    if ((WORD)(weekDay_hours & 0x00FF)>=10 && (WORD)(weekDay_hours & 0x00FF) <=19)
+        realhour = (weekDay_hours & 0x00FF) + 2;
+    else if((WORD)(weekDay_hours & 0x00FF)>=20)
+        realhour = (weekDay_hours & 0x00FF) + 2*2;
+    
+    RTCVAL = (weekDay_hours& 0xFF00) + realhour ;
+
+    if ((WORD)((minutes_seconds& 0xFF00) >>8) >=10 && (WORD)((minutes_seconds& 0xFF00) >>8) <=19)
+        realmin = ((minutes_seconds& 0xFF00) >>8) +6;
+    else if((WORD)((minutes_seconds& 0xFF00) >>8) >=20 && (WORD)((minutes_seconds& 0xFF00) >>8) <=29)
+        realmin = ((minutes_seconds& 0xFF00) >>8) + 6*2;
+    else if((WORD)((minutes_seconds& 0xFF00) >>8) >=30 && (WORD)((minutes_seconds& 0xFF00) >>8) <=39)
+        realmin = ((minutes_seconds& 0xFF00) >>8) + 6*3;
+    else if((WORD)((minutes_seconds& 0xFF00) >>8) >=40 && (WORD)((minutes_seconds& 0xFF00) >>8) <=49)
+        realmin = ((minutes_seconds& 0xFF00) >>8) + 6*4;
+    else if((WORD)((minutes_seconds& 0xFF00) >>8) >=50)
+        realmin = ((minutes_seconds& 0xFF00) >>8) + 6*5;
+    else if((WORD)((minutes_seconds& 0xFF00) >>8) <= 9)
+        realmin = ((minutes_seconds& 0xFF00) >>8);
+    // For seconds
+    if ((WORD)(minutes_seconds & 0x00FF)>=10 && (WORD)(minutes_seconds & 0x00FF) <=19)
+        realsec = (minutes_seconds & 0x00FF) +6;
+    else if((WORD)(minutes_seconds & 0x00FF)>=20 && (WORD)(minutes_seconds & 0x00FF) <=29)
+        realsec = (minutes_seconds & 0x00FF) + 6*2;
+    else if((WORD)(minutes_seconds & 0x00FF)>=30 && (WORD)(minutes_seconds & 0x00FF) <=39)
+        realsec = (minutes_seconds & 0x00FF) + 6*3;
+    else if((WORD)(minutes_seconds & 0x00FF)>=40 && (WORD)(minutes_seconds & 0x00FF) <=49)
+        realsec = (minutes_seconds & 0x00FF) + 6*4;
+    else if((WORD)(minutes_seconds & 0x00FF)>=50)
+        realsec = (minutes_seconds & 0x00FF) + 6*5;
+    else if((WORD)(minutes_seconds & 0x00FF) <= 9)
+        realsec = (minutes_seconds & 0x00FF);
+    RTCVAL = realmin*16*16 + realsec;
+}
+#endif
+
+/****************************************************************************
+  Function:
+    void PIC24RTCCSetDate( WORD xx_year, WORD month_day )
+  Description:
+    This routine sets the RTCC date to the specified value.
+  Precondition:
+    The RTCC module has been initialized.
+  Parameters:
+    WORD xx_year    - BCD year in the lower byte
+    WORD month_day  - BCD month in the upper byte, BCD day in the lower byte
+  Returns:
+    None
+  Remarks:
+    For the PIC32MX, we use library routines.
+  ***************************************************************************/
+
+#if defined( __C30__ )
+void PIC24RTCCSetDate( WORD xx_year, WORD month_day )
+{
+    UnlockRTCC();
+    RCFGCALbits.RTCPTR0 = 1;
+    RCFGCALbits.RTCPTR1 = 1;
+    RTCVAL = xx_year;
+    RTCVAL = month_day;
+}
+#endif
+/****************************************************************************
+  Function:
+    DWORD   PIC24RTCCGetDate( void )
+  Description:
+    This routine reads the date from the RTCC module.
+  Precondition:
+    The RTCC module has been initialized.
+  Parameters:
+    None
+  Returns:
+    DWORD in the format <xx><YY><MM><DD>
+  Remarks:
+    To catch roll-over, we do two reads.  If the readings match, we return
+    that value.  If the two do not match, we read again until we get two
+    matching values.
+    For the PIC32MX, we use library routines, which return the date in the
+    PIC32MX format.
+  ***************************************************************************/
+
+#if defined( __C30__ )
+DWORD   PIC24RTCCGetDate( void )
+{
+    DWORD_VAL   date1;
+    DWORD_VAL   date2;
+
+    do
+    {
+        while (RCFGCALbits.RTCSYNC);
+
+        RCFGCALbits.RTCPTR0 = 1;
+        RCFGCALbits.RTCPTR1 = 1;
+        date1.w[1] = RTCVAL;
+        date1.w[0] = RTCVAL;
+
+        RCFGCALbits.RTCPTR0 = 1;
+        RCFGCALbits.RTCPTR1 = 1;
+        date2.w[1] = RTCVAL;
+        date2.w[0] = RTCVAL;
+
+    } while (date1.Val != date2.Val);
+
+    return date1.Val;
+}
+#endif
+
+
+/****************************************************************************
+  Function:
+    DWORD   PIC24RTCCGetTime( void )
+  Description:
+    This routine reads the time from the RTCC module.
+  Precondition:
+    The RTCC module has been initialized.
+  Parameters:
+    None
+  Returns:
+    DWORD in the format <xx><HH><MM><SS>
+  Remarks:
+    To catch roll-over, we do two reads.  If the readings match, we return
+    that value.  If the two do not match, we read again until we get two
+    matching values.
+    For the PIC32MX, we use library routines, which return the time in the
+    PIC32MX format.
+  ***************************************************************************/
+
+#if defined( __C30__ )
+DWORD   PIC24RTCCGetTime( void )
+{
+    DWORD_VAL   time1;
+    DWORD_VAL   time2;
+
+    do
+    {
+        while (RCFGCALbits.RTCSYNC);
+        RCFGCALbits.RTCPTR1 = 0;
+        RCFGCALbits.RTCPTR0 = 0;
+        time1.w[0] = RTCVAL;
+        RCFGCALbits.RTCPTR1 = 0;
+        RCFGCALbits.RTCPTR0 = 1;
+        time1.w[1] = RTCVAL;
+
+        RCFGCALbits.RTCPTR1 = 0;
+        RCFGCALbits.RTCPTR0 = 0;
+        time2.w[0] = RTCVAL;
+        RCFGCALbits.RTCPTR1 = 0;
+        RCFGCALbits.RTCPTR0 = 1;
+        time2.w[1] = RTCVAL;
+    } while (time1.Val != time2.Val);
+
+    return time1.Val;
+}
+#endif
+
+/****************************************************************************
+  Function:
+    void UnlockRTCC( void )
+  Description:
+    This function unlocks the RTCC so we can write a value to it.
+  Precondition:
+    None
+  Parameters:
+    None
+  Return Values:
+    None
+  Remarks:
+    For the PIC32MX, we use library routines.
+  ***************************************************************************/
+
+    #define RTCC_INTERRUPT_REGISTER IEC3
+    #define RTCC_INTERRUPT_VALUE    0x2000
+
+#if defined( __C30__ )
+void UnlockRTCC( void )
+{
+    BOOL interruptsWereOn;
+
+    interruptsWereOn = FALSE;
+    if ((RTCC_INTERRUPT_REGISTER & RTCC_INTERRUPT_VALUE) == RTCC_INTERRUPT_VALUE)
+    {
+        interruptsWereOn = TRUE;
+        RTCC_INTERRUPT_REGISTER &= ~RTCC_INTERRUPT_VALUE;
+    }
+
+    // Unlock the RTCC module
+    __asm__ ("mov #NVMKEY,W0");
+    __asm__ ("mov #0x55,W1");
+    __asm__ ("mov #0xAA,W2");
+    __asm__ ("mov W1,[W0]");
+    __asm__ ("nop");
+    __asm__ ("mov W2,[W0]");
+    __asm__ ("bset RCFGCAL,#13");
+    __asm__ ("nop");
+    __asm__ ("nop");
+
+    if (interruptsWereOn)
+    {
+        RTCC_INTERRUPT_REGISTER |= RTCC_INTERRUPT_VALUE;
+    }
+}
+#endif
+
+unsigned char AfficheTime(unsigned char *curtime)
+{
+    unsigned char realtime;
+        if ((WORD)*curtime>=16 && (WORD)*curtime <=25)
+            realtime = *curtime -6;
+        else if((WORD)*curtime>=32 && (WORD)*curtime <=41)
+            realtime = *curtime - 6*2;
+        else if((WORD)*curtime>=48 && (WORD)*curtime <=57)
+            realtime = *curtime - 6*3;
+        else if((WORD)*curtime>=64 && (WORD)*curtime <=73)
+            realtime = *curtime - 6*4;
+        else if((WORD)*curtime>=80)
+            realtime = *curtime - 6*5;
+        else if((WORD)*curtime <= 9)
+            realtime = *curtime;
+    return realtime;
+}
+
+unsigned char AfficheHours(unsigned char *curtime)
+{
+    unsigned char realtime;
+    if((WORD)*curtime <= 9)
+        realtime = *curtime;
+    else if ((WORD)*curtime>=12 && (WORD)*curtime <=21)
+        realtime = *curtime -2;
+    else if((WORD)*curtime>=24)
+        realtime = *curtime - 2*2;
+    return realtime;
+}

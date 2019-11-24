@@ -65,7 +65,7 @@ void DoUARTConfig(void);
 #else
 	#define SaveAppConfig(a)
 #endif
-
+extern char ctime[16];
 void SMTPDemo(void);
 void PingDemo(void);
 void SNMPTrapDemo(void);

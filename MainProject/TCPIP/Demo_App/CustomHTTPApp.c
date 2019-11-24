@@ -109,7 +109,8 @@ static BOOL lastSuccess = FALSE;
 
 // Stick status message variable.  See lastSuccess for details.
 static BOOL lastFailure = FALSE;
-
+// current time to show on
+char ctime[16] = " ";
 /****************************************************************************
   Section:
 	Authorization Handlers
@@ -1662,11 +1663,17 @@ static HTTP_IO_RESULT HTTPPostDDNSConfig(void)
 void HTTPPrint_builddate(void)
 {
     curHTTP.callbackPos = 0x01;
-    if(TCPIsPutReady(sktHTTP) < strlenpgm((ROM char*)__DATE__" "__TIME__))
+    char afftime[30];
+    /*afftime = (char*)calloc(30,sizeof(char));*/
+    strcpy(afftime,__DATE__);
+    strcat(afftime," ");
+    strcat(afftime,ctime);
+    if(TCPIsPutReady(sktHTTP) < strlenpgm((ROM char*)afftime))
         return;
  
     curHTTP.callbackPos = 0x00;
-    TCPPutROMString(sktHTTP, (ROM void*)__DATE__" "__TIME__);
+    TCPPutROMString(sktHTTP, (ROM void*)afftime);
+    //free(afftime);
 }
 
 void HTTPPrint_version(void)
