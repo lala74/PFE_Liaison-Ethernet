@@ -560,7 +560,7 @@ int main(void)
         currentTime.l = PIC24RTCCGetTime();
         #endif
         strcpy(ctime,"Time: ");
-        realTime.hour = AfficheHours(&currentTime.hour);
+        realTime.hour = AfficheTime(&currentTime.hour);
         uitoa((WORD)realTime.hour,TIMEString);
         strcat(ctime,TIMEString);
         
@@ -573,7 +573,7 @@ int main(void)
         realTime.sec = AfficheTime(&currentTime.sec);
         uitoa((WORD)realTime.sec,TIMEString);
         strcat(ctime,TIMEString);
-        strcat(ctime," ");
+        strcat(ctime,"  ");
         for(j = 0; j < strlen((char*)ctime); j++)
             {
                 LCDText[LCDPos++] = ctime[j];
@@ -1607,12 +1607,19 @@ void PIC24RTCCSetTime( WORD weekDay_hours, WORD minutes_seconds )
     UnlockRTCC();
     RCFGCALbits.RTCPTR0 = 1;
     RCFGCALbits.RTCPTR1 = 0;
-    if((WORD)(weekDay_hours & 0x00FF) <= 9)
-        realhour = (weekDay_hours & 0x00FF);
+    
     if ((WORD)(weekDay_hours & 0x00FF)>=10 && (WORD)(weekDay_hours & 0x00FF) <=19)
-        realhour = (weekDay_hours & 0x00FF) + 2;
-    else if((WORD)(weekDay_hours & 0x00FF)>=20)
-        realhour = (weekDay_hours & 0x00FF) + 2*2;
+        realhour = (weekDay_hours & 0x00FF) +6;
+    else if((WORD)(weekDay_hours & 0x00FF)>=20 && (WORD)(weekDay_hours & 0x00FF) <=29)
+        realhour = (weekDay_hours & 0x00FF) + 6*2;
+    else if((WORD)(weekDay_hours & 0x00FF)>=30 && (WORD)(weekDay_hours & 0x00FF) <=39)
+        realhour = (weekDay_hours & 0x00FF) + 6*3;
+    else if((WORD)(weekDay_hours & 0x00FF)>=40 && (WORD)(weekDay_hours & 0x00FF) <=49)
+        realhour = (weekDay_hours & 0x00FF) + 6*4;
+    else if((WORD)(weekDay_hours & 0x00FF)>=50)
+        realhour = (weekDay_hours & 0x00FF) + 6*5;
+    else if((WORD)(weekDay_hours & 0x00FF) <= 9)
+        realhour = (weekDay_hours & 0x00FF);
     
     RTCVAL = (weekDay_hours& 0xFF00) + realhour ;
 
@@ -1827,17 +1834,5 @@ unsigned char AfficheTime(unsigned char *curtime)
             realtime = *curtime - 6*5;
         else if((WORD)*curtime <= 9)
             realtime = *curtime;
-    return realtime;
-}
-
-unsigned char AfficheHours(unsigned char *curtime)
-{
-    unsigned char realtime;
-    if((WORD)*curtime <= 9)
-        realtime = *curtime;
-    else if ((WORD)*curtime>=12 && (WORD)*curtime <=21)
-        realtime = *curtime -2;
-    else if((WORD)*curtime>=24)
-        realtime = *curtime - 2*2;
     return realtime;
 }
