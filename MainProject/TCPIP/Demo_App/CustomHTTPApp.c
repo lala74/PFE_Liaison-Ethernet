@@ -1858,8 +1858,16 @@ void HTTPPrint_pot(void)
 
 void HTTPPrint_temp(void)
 {
-    strcat(AN4String," °C");
-   	TCPPutString(sktHTTP, AN4String);
+//    strcat(AN4String," °C");
+//    TCPPutString(sktHTTP, AN4String);
+    BYTE result[30];
+    strcpy(result, AN4String);
+    strcat(result, ",");
+    strcat(result, AN5String);
+    strcat(result," °C");
+    
+    
+   	TCPPutString(sktHTTP, result);
 }
 
 void HTTPPrint_lcdtext(void)

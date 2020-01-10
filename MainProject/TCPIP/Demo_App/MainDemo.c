@@ -82,6 +82,7 @@ APP_CONFIG AppConfig;
 static unsigned short wOriginalAppConfigChecksum;    // Checksum of the ROM defaults for AppConfig
 BYTE AN0String[8];
 BYTE AN4String[8];
+BYTE AN5String[8];
 BYTE TIMEString[8];
 #define MAX_COMMAND_LENGTH              50
 // Use UART2 instead of UART1 for stdout (printf functions).  Explorer 16 
@@ -310,7 +311,8 @@ int main(void)
 {
     static DWORD t = 0;
     static DWORD dwLastIP = 0;
-    uint16_t temperature,LCDPos,j;
+    uint16_t temperature_before_comma, temperature_after_comma;
+    uint16_t LCDPos,j;
     char result[20],timeStart[9];
     // Initialize application specific hardware
     InitializeBoard();
@@ -536,11 +538,15 @@ int main(void)
         // Read Temperature and show on LC
         ADC_SetConfiguration(ADC_CONFIGURATION_DEFAULT);
         ADC_ChannelEnable(ADC_CHANNEL_4);
-        temperature = ADC_Read10bit(ADC_CHANNEL_4)*(1.6/1024)*(125/1.6);
-        uitoa((WORD)temperature, AN4String);
+        temperature_before_comma = ADC_Read10bit(ADC_CHANNEL_4) * (125/1.6) * (1.6/1024);                // parce que ADC : 0 - 1024 et temperature : 0 - 125
+        temperature_after_comma = ADC_Read10bit(ADC_CHANNEL_4) * (125/1.6) * (1.6/1024) * 100 - temperature_before_comma*100;
+        uitoa((WORD)temperature_before_comma, AN4String);
         strcpy(result,"Temp: ");
         strcat(result,AN4String);
-        strcat(result," deg C");
+        strcat(result, ",");
+        uitoa((WORD)temperature_after_comma, AN5String);
+        strcat(result,AN5String);
+        strcat(result," C");
         strcpypgm2ram((char*)LCDText, result); 
         LCDUpdate();
                 //afficher Time on LCD
@@ -559,26 +565,26 @@ int main(void)
         #if defined(__C30__)
         currentTime.l = PIC24RTCCGetTime();
         #endif
-        strcpy(ctime,"Time: ");
-        realTime.hour = AfficheTime(&currentTime.hour);
-        uitoa((WORD)realTime.hour,TIMEString);
-        strcat(ctime,TIMEString);
-        
-        strcat(ctime,":");
-        realTime.min = AfficheTime(&currentTime.min);
-        uitoa((WORD)realTime.min,TIMEString);
-        strcat(ctime,TIMEString);
-        
-        strcat(ctime,":");
-        realTime.sec = AfficheTime(&currentTime.sec);
-        uitoa((WORD)realTime.sec,TIMEString);
-        strcat(ctime,TIMEString);
-        strcat(ctime,"  ");
-        for(j = 0; j < strlen((char*)ctime); j++)
-            {
-                LCDText[LCDPos++] = ctime[j];
-            }
-        LCDUpdate();
+//        strcpy(ctime,"Time: ");
+//        realTime.hour = AfficheTime(&currentTime.hour);
+//        uitoa((WORD)realTime.hour,TIMEString);
+//        strcat(ctime,TIMEString);
+//        
+//        strcat(ctime,":");
+//        realTime.min = AfficheTime(&currentTime.min);
+//        uitoa((WORD)realTime.min,TIMEString);
+//        strcat(ctime,TIMEString);
+//        
+//        strcat(ctime,":");
+//        realTime.sec = AfficheTime(&currentTime.sec);
+//        uitoa((WORD)realTime.sec,TIMEString);
+//        strcat(ctime,TIMEString);
+//        strcat(ctime,"  ");
+//        for(j = 0; j < strlen((char*)ctime); j++)
+//            {
+//                LCDText[LCDPos++] = ctime[j];
+//            }
+//        LCDUpdate();
         // read potentionmetre
         ProcessIO();
 
@@ -884,7 +890,9 @@ static void ProcessTemp(void)
 #if defined(__C30__) || defined(__C32__)
     // Convert potentiometer result into ASCII string
     uint16_t temperature = ADC_Read10bit(ADC_CHANNEL_4)*125/1024;
+    uint16_t temperature_after = ADC_Read10bit(ADC_CHANNEL_4) * (125/1.6) * (1.6/1024) * 100 - temperature*100;
     uitoa((WORD)temperature, AN4String);
+    uitoa((WORD)temperature_after, AN5String);
 #else
     // AN0 should already be set up as an analog input
     ADCON0bits.GO = 1;
